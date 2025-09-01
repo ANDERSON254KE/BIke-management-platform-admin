@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      Role       @default(USER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  bookings  Booking[]
+  sosAlerts SOSAlert[]
+
+  @@map("users")
+}
+
+model Bike {
+  id           String      @id @default(cuid())
+  name         String
+  description  String
+  pricePerHour Float
+  status       BikeStatus  @default(AVAILABLE)
+  trackingId   String?     @unique
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  images       BikeImage[]
+  bookings     Booking[]
+  sosAlerts    SOSAlert[]
+
+  @@map("bikes")
+}
+
+model BikeImage {
+  id        String   @id @default(cuid())
+  bikeId    String
+  image     Bytes
+  createdAt DateTime @default(now())
+  bike      Bike     @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+
+  @@map("bike_images")
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  userId     String
+  bikeId     String
+  startTime  DateTime
+  endTime    DateTime
+  status     BookingStatus @default(PENDING)
+  totalPrice Float
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  bike       Bike          @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model SOSAlert {
+  id        String         @id @default(cuid())
+  userId    String
+  bikeId    String?
+  location  String?
+  message   String
+  status    SOSAlertStatus @default(PENDING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  bike      Bike?          @relation(fields: [bikeId], references: [id])
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sos_alerts")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  targetId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BikeStatus {
+  AVAILABLE
+  MAINTENANCE
+  RENTED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum SOSAlertStatus {
+  PENDING
+  RESOLVED
+}
