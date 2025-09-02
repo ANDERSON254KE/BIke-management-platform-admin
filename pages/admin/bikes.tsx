@@ -28,6 +28,11 @@ function AdminBikes() {
     trackingId: ''
   })
   const [images, setImages] = useState<string[]>([])
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; bikeId: string; bikeName: string }>({
+    show: false,
+    bikeId: '',
+    bikeName: ''
+  })
 
   // Fetch bikes from API
   useEffect(() => {
@@ -167,14 +172,18 @@ function AdminBikes() {
     }
   }
 
-  const handleDeleteBike = async (bikeId: string) => {
-    if (!confirm('Are you sure you want to delete this bike?')) {
-      return
-    }
+  const handleDeleteBike = (bikeId: string, bikeName: string) => {
+    setDeleteConfirm({
+      show: true,
+      bikeId,
+      bikeName
+    })
+  }
 
+  const confirmDeleteBike = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/bikes/${bikeId}`, {
+      const response = await fetch(`/api/bikes/${deleteConfirm.bikeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -186,9 +195,11 @@ function AdminBikes() {
       }
 
       // Remove from local state
-      setBikes(bikes.filter(bike => bike.id !== bikeId))
+      setBikes(bikes.filter(bike => bike.id !== deleteConfirm.bikeId))
+      setDeleteConfirm({ show: false, bikeId: '', bikeName: '' })
     } catch (err) {
       console.error('Error deleting bike:', err)
+      setDeleteConfirm({ show: false, bikeId: '', bikeName: '' })
     }
   }
 
@@ -443,7 +454,7 @@ function AdminBikes() {
                         <Edit3 className="w-4 h-4" />
                       </Link>
                       <button 
-                        onClick={() => handleDeleteBike(bike.id)}
+                        onClick={() => handleDeleteBike(bike.id, bike.name)}
                         className="p-2 text-gray-400 hover:text-red-600"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -519,6 +530,41 @@ function AdminBikes() {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">Delete Bike</h3>
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                Are you sure you want to delete <strong>{deleteConfirm.bikeName}</strong>? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, bikeId: '', bikeName: '' })}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteBike}
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
