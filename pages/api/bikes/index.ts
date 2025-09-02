@@ -2,6 +2,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import formidable from 'formidable';
+import fs from 'fs';
+import path from 'path';
+
+// Disable body parser for file uploads
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -31,8 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             images: { 
               select: { 
                 id: true, 
-                createdAt: true,
-                // Include image URLs for display
+                url: true,
+                filename: true,
+                createdAt: true
               } 
             }
           },
@@ -47,7 +58,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     case 'POST': {
       try {
-        const { name, description, pricePerHour, status, trackingId, images } = req.body;
+        // Parse form data including files
+        const form = formidable({
+          uploadDir: path.join(process.cwd(), 'public/uploads/bikes'),
+          keepExtensions: true,
+          maxFileSize: 5 * 1024 * 1024, // 5MB limit
+          multiples: true,
+        });
+
+        const [fields, files] = await form.parse(req);
+
+        // Extract form fields
+        const name = Array.isArray(fields.name) ? fields.name[0] : fields.name;
+        const description = Array.isArray(fields.description) ? fields.description[0] : fields.description;
+        const pricePerHour = Array.isArray(fields.pricePerHour) ? fields.pricePerHour[0] : fields.pricePerHour;
+        const status = Array.isArray(fields.status) ? fields.status[0] : fields.status;
+        const trackingId = Array.isArray(fields.trackingId) ? fields.trackingId[0] : fields.trackingId;
 
         // Validate required fields
         if (!name || !pricePerHour) {
@@ -55,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Validate pricePerHour is a valid number
-        const price = parseFloat(pricePerHour);
+        const price = parseFloat(pricePerHour as string);
         if (isNaN(price) || price <= 0) {
           return res.status(400).json({ error: 'pricePerHour must be a valid positive number' });
         }
@@ -66,24 +92,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Create the bike first
         const bike = await prisma.bike.create({
           data: {
-            name,
-            description: description || null,
+            name: name as string,
+            description: (description as string) || '',
             pricePerHour: price,
-            status: status || 'AVAILABLE',
+            status: (status as any) || 'AVAILABLE',
             trackingId: finalTrackingId
           }
         });
 
-        // Handle image uploads if provided (simplified for now)
-        if (Array.isArray(images) && images.length > 0) {
-          // For now, we'll just save the bike and handle image processing separately
-          // In a real app, you'd upload to storage and save image references
+        // Handle image uploads
+        const imageFiles = files.images;
+        const savedImages = [];
+
+        if (imageFiles) {
+          const filesToProcess = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
+          
+          for (const file of filesToProcess) {
+            if (file && file.filepath) {
+              // Generate unique filename
+              const ext = path.extname(file.originalFilename || '.jpg');
+              const filename = `${bike.id}_${Date.now()}_${Math.random().toString(36).substring(7)}${ext}`;
+              const newPath = path.join(process.cwd(), 'public/uploads/bikes', filename);
+              
+              // Move file to final location
+              fs.renameSync(file.filepath, newPath);
+              
+              // Save image record to database
+              const savedImage = await prisma.bikeImage.create({
+                data: {
+                  bikeId: bike.id,
+                  url: `/uploads/bikes/${filename}`,
+                  filename: filename
+                }
+              });
+              
+              savedImages.push(savedImage);
+            }
+          }
         }
 
-        // Return the bike with basic information
+        // Return the bike with images
         return res.status(201).json({
           ...bike,
-          images: [] // Return empty images array for now
+          images: savedImages
         });
 
       } catch (error) {

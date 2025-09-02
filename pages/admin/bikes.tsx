@@ -64,22 +64,28 @@ function AdminBikes() {
     return `${prefix}${randomNum}`;
   }
 
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    if (images.length + files.length > 10) {
+    if (selectedFiles.length + files.length > 10) {
       alert('Maximum 10 images allowed');
       return;
     }
 
-    const newImages = Array.from(files).map(file => URL.createObjectURL(file));
+    const newFiles = Array.from(files);
+    const newImages = newFiles.map(file => URL.createObjectURL(file));
+    
+    setSelectedFiles(prev => [...prev, ...newFiles]);
     setImages(prev => [...prev, ...newImages]);
     e.target.value = '';
   };
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddBike = async (e: React.FormEvent) => {
@@ -87,18 +93,26 @@ function AdminBikes() {
     
     try {
       const token = localStorage.getItem('token')
+      
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('name', newBike.name)
+      formData.append('description', newBike.description)
+      formData.append('pricePerHour', newBike.pricePerHour)
+      formData.append('status', newBike.status)
+      formData.append('trackingId', newBike.trackingId || generateRandomTrackingId())
+      
+      // Add image files
+      selectedFiles.forEach((file) => {
+        formData.append('images', file)
+      })
+
       const response = await fetch('/api/bikes', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...newBike,
-          pricePerHour: parseFloat(newBike.pricePerHour),
-          trackingId: newBike.trackingId || generateRandomTrackingId(), // Generate random ID if not provided
-          images: images // Send image data
-        })
+        body: formData
       })
 
       if (!response.ok) {
@@ -120,6 +134,7 @@ function AdminBikes() {
         trackingId: ''
       })
       setImages([])
+      setSelectedFiles([])
       setShowAddForm(false)
     } catch (err: any) {
       setError(err.message || 'Failed to add bike')
@@ -386,6 +401,7 @@ function AdminBikes() {
                   onClick={() => {
                     setShowAddForm(false)
                     setImages([])
+                    setSelectedFiles([])
                   }}
                   className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
                 >
@@ -456,14 +472,32 @@ function AdminBikes() {
                   </div>
 
                   {/* Image Preview */}
-                  {bike.images && bike.images.length > 0 && (
+                  {bike.images && bike.images.length > 0 ? (
                     <div className="mb-4">
                       <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200">
                         <img
-                          src={bike.images[0]?.url || '/placeholder-bike.jpg'}
+                          src={bike.images[0]?.url}
                           alt={bike.name}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-bike.jpg';
+                          }}
                         />
+                      </div>
+                      {bike.images.length > 1 && (
+                        <div className="mt-2 text-xs text-gray-500 text-center">
+                          +{bike.images.length - 1} more image{bike.images.length > 2 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-4">
+                      <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                        <div className="text-center text-gray-400">
+                          <ImageIcon className="w-12 h-12 mx-auto mb-2" />
+                          <p className="text-sm">No image</p>
+                        </div>
                       </div>
                     </div>
                   )}
