@@ -2,6 +2,7 @@
 import { ComponentType, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/router'
+import AdminLayout from './AdminLayout'
 
 export function withAdminAuth<P extends object>(WrappedComponent: ComponentType<P>, title?: string) {
   return function WithAdminAuth(props: P) {
@@ -24,6 +25,10 @@ export function withAdminAuth<P extends object>(WrappedComponent: ComponentType<
       )
     }
 
-    return <WrappedComponent {...props} />
+    return (
+      <AdminLayout title={title}>
+        <WrappedComponent {...props} />
+      </AdminLayout>
+    )
   }
 }

@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { Bike, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import PublicLayout from '@/components/PublicLayout'
+import { Shield, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
 
-export default function Register() {
+export default function AdminRegister() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,25 +22,26 @@ export default function Register() {
     setError('')
 
     try {
-      await register(name, email, password)
-      router.push('/')
+      await register(name, email, password, true) // Pass true for admin registration
+      router.push('/admin')
     } catch (err: any) {
-      setError(err.message || 'Registration failed')
+      setError(err.message || 'Admin registration failed')
     }
     
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4">
+    <PublicLayout title="Admin Registration">
+      <div className="flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <div className="inline-flex p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl mb-4">
-              <Bike className="w-10 h-10 text-white" />
+              <Shield className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
-            <p className="text-gray-600">Join our bike rental platform</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Admin Registration</h2>
+            <p className="text-gray-600">Create your admin account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -112,20 +114,21 @@ export default function Register() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating Admin Account...' : 'Create Admin Account'}
             </button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-gray-200 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              Already have an admin account?{' '}
               <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-semibold">
-                Sign in
+                Admin Sign in
               </Link>
             </p>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PublicLayout>
   )
 }
