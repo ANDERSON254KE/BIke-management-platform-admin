@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
+  register: (name: string, email: string, password: string) => Promise<void>
   loading: boolean
 }           
 
@@ -56,25 +57,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-// contexts/AuthContext.tsx
-const login = async (email: string, password: string) => {
-  try {
-    const response = await axios.post('/api/auth/login', {
-      email,
-      password
-    });
-    
-    const { token, user: userData } = response.data;
-    localStorage.setItem('token', token);
-    setUser(userData);
-    
-    // IMPORTANT: Don't redirect here - let the component handle it
-    return { success: true };
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.error || error.message || 'Login failed';
-    return { success: false, error: errorMessage };
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await axios.post('/api/auth/login', {
+        email,
+        password
+      });
+      
+      const { token, user: userData } = response.data;
+      localStorage.setItem('token', token);
+      setUser(userData);
+      
+      // IMPORTANT: Don't redirect here - let the component handle it
+      return { success: true };
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+      return { success: false, error: errorMessage };
+    }
   }
-}
+
+  const register = async (name: string, email: string, password: string) => {
+    await axios.post('/api/auth/register', { name, email, password });
+  }
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -83,7 +87,7 @@ const login = async (email: string, password: string) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, register, loading }}>
       {children}
     </AuthContext.Provider>
   )
