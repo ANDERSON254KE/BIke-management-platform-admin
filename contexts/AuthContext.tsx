@@ -97,7 +97,7 @@ const register = async (name: string, email: string, password: string) => {
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
-    router.push('/')
+    router.push('/auth/login')
   }
 
   return (
