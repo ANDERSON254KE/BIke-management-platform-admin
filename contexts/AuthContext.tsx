@@ -13,6 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
   loading: boolean
 }           
@@ -76,6 +77,23 @@ const login = async (email: string, password: string) => {
   }
 }
 
+const register = async (name: string, email: string, password: string) => {
+  try {
+    const response = await axios.post('/api/auth/register', {
+      name,
+      email,
+      password
+    });
+    
+    const { token, user: userData } = response.data;
+    localStorage.setItem('token', token);
+    setUser(userData);
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.error || error.message || 'Registration failed';
+    throw new Error(errorMessage);
+  }
+}
+
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
@@ -83,7 +101,7 @@ const login = async (email: string, password: string) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   )
